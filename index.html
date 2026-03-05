@@ -133,15 +133,13 @@
 </div>
 
 <script>
-    // ─── CONFIGURACIÓN ───────────────────────────────────────────────────
-    // Mismos workers que ya usás para Flex — no hay que tocar nada
-    const CUENTAS = [
-        { nombre: 'Mikra', proxy: 'https://mikra-flex-proxy.rafaelassir.workers.dev' },
-        { nombre: 'Chaya', proxy: 'https://chaya-flex-proxy.rafaelassir.workers.dev' }
-    ];
-    // ─────────────────────────────────────────────────────────────────────
+    const WORKER = 'https://mikra-mp-balance.rafaelassir.workers.dev';
 
-    const tokens   = {};
+    const CUENTAS = [
+        { nombre: 'Mikra', key: 'mikra' },
+        { nombre: 'Chaya', key: 'chaya' }
+    ];
+
     const balances = {};
 
     function fmt(n) {
@@ -156,29 +154,13 @@
         el.textContent = texto;
     }
 
-    async function getToken(cuenta) {
-        if (tokens[cuenta.nombre]) return tokens[cuenta.nombre];
-        const r = await fetch(cuenta.proxy + '/get-token');
-        const d = await r.json();
-        if (d.access_token) { tokens[cuenta.nombre] = d.access_token; return d.access_token; }
-        return null;
-    }
-
-    async function mpGet(path, token) {
-        const r = await fetch('https://api.mercadopago.com' + path, {
-            headers: { Authorization: 'Bearer ' + token }
-        });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-    }
-
     async function cargarBalance(cuenta) {
         setStatus(cuenta.nombre, 'loading', 'cargando…');
         try {
-            const token = await getToken(cuenta);
-            if (!token) throw new Error('sin token');
+            const r = await fetch(WORKER + '/balance?cuenta=' + cuenta.key);
+            const d = await r.json();
+            if (d.error) throw new Error(d.error);
 
-            const d    = await mpGet('/v1/account/balance', token);
             const disp = d.available_balance   ?? 0;
             const ret  = d.unavailable_balance ?? 0;
             const tot  = d.total_amount        ?? (disp + ret);
@@ -202,21 +184,8 @@
 
         await Promise.all(CUENTAS.map(async cuenta => {
             try {
-                const token = tokens[cuenta.nombre];
-                if (!token) return;
-
-                const hoy   = new Date();
-                const hasta = new Date(hoy); hasta.setDate(hasta.getDate() + 30);
-                const ds = hoy.toISOString().split('T')[0]   + 'T00:00:00.000-03:00';
-                const hs = hasta.toISOString().split('T')[0] + 'T23:59:59.000-03:00';
-
-                const d = await mpGet(
-                    '/v1/payments/search?status=approved&sort=money_release_date&criteria=asc' +
-                    '&begin_date=' + encodeURIComponent(ds) +
-                    '&end_date='   + encodeURIComponent(hs) +
-                    '&limit=100',
-                    token
-                );
+                const r = await fetch(WORKER + '/releases?cuenta=' + cuenta.key);
+                const d = await r.json();
 
                 (d.results || []).forEach(p => {
                     if (!p.money_release_date || p.money_release_status === 'released') return;

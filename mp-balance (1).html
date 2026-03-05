@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 Balance MP - Mikra + Chaya</title>
+    <meta name="theme-color" content="#0d1117">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Balance MP">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,500;9..40,700&display=swap');
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+        body { font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif; background:#0d1117; color:#e6edf3; padding:12px; padding-bottom:env(safe-area-inset-bottom,20px); }
+        .container { max-width:700px; margin:0 auto; }
+        h1 { color:#FFE600; text-align:center; font-size:20px; font-weight:700; letter-spacing:-.5px; margin-bottom:16px; }
+        .cuentas-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+        @media(max-width:480px){.cuentas-grid{grid-template-columns:1fr;}}
+        .cuenta-card { background:#161b22; border:1.5px solid #30363d; border-radius:16px; padding:16px; }
+        .cuenta-card.mikra { border-color:#9C27B0; }
+        .cuenta-card.chaya { border-color:#FF6B00; }
+        .cuenta-header { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+        .cuenta-dot { width:10px; height:10px; border-radius:50%; }
+        .mikra .cuenta-dot { background:#9C27B0; }
+        .chaya .cuenta-dot { background:#FF6B00; }
+        .cuenta-nombre { font-weight:700; font-size:15px; }
+        .cuenta-status { margin-left:auto; font-size:10px; padding:3px 8px; border-radius:20px; background:#21262d; color:#8b949e; }
+        .cuenta-status.ok { background:#0d2a1a; color:#3fb950; }
+        .cuenta-status.error { background:#2d1117; color:#f85149; }
+        .cuenta-status.loading { background:#1a1f2d; color:#58a6ff; }
+        .balance-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+        .balance-label { font-size:11px; color:#8b949e; font-weight:500; }
+        .balance-value { font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
+        .balance-value.disponible { color:#3fb950; }
+        .balance-value.retenido { color:#d29922; }
+        .balance-value.total { color:#58a6ff; font-size:20px; }
+        .balance-divider { border:none; border-top:1px solid #21262d; margin:10px 0; }
+        .balance-skeleton { height:20px; background:linear-gradient(90deg,#21262d 25%,#30363d 50%,#21262d 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; width:110px; display:inline-block; }
+        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+        .total-card { background:linear-gradient(135deg,#1a1f2d,#161b22); border:1.5px solid #3483FA; border-radius:16px; padding:16px 20px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+        .total-label { font-size:13px; color:#8b949e; font-weight:500; }
+        .total-value { font-size:28px; font-weight:700; color:#58a6ff; font-variant-numeric:tabular-nums; }
+        .total-sub { font-size:12px; color:#8b949e; margin-top:2px; }
+        button { background:linear-gradient(135deg,#238636,#196127); color:white; border:none; padding:10px 18px; border-radius:10px; cursor:pointer; font-size:14px; font-family:inherit; font-weight:600; transition:all .2s; touch-action:manipulation; min-height:44px; width:100%; margin-bottom:10px; }
+        button:hover { filter:brightness(1.1); }
+        button:active { transform:scale(.98); }
+        button:disabled { opacity:.4; cursor:not-allowed; }
+        .last-update { text-align:center; font-size:11px; color:#484f58; margin-bottom:12px; }
+        .proyeccion-card { background:#161b22; border:1.5px solid #30363d; border-radius:16px; padding:16px; }
+        .proyeccion-title { font-size:13px; font-weight:700; color:#FFE600; margin-bottom:14px; }
+        .release-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #21262d; }
+        .release-item:last-child { border-bottom:none; }
+        .release-fecha { font-size:13px; font-weight:600; }
+        .release-monto { font-size:15px; font-weight:700; color:#d29922; font-variant-numeric:tabular-nums; }
+        .release-acumulado { font-size:11px; color:#3fb950; font-variant-numeric:tabular-nums; text-align:right; }
+        .release-cuenta-badges { display:flex; gap:4px; margin-top:3px; flex-wrap:wrap; }
+        .badge-mikra { background:rgba(156,39,176,.2); color:#ce93d8; border:1px solid rgba(156,39,176,.4); padding:1px 6px; border-radius:6px; font-size:10px; }
+        .badge-chaya { background:rgba(255,107,0,.2); color:#ffb74d; border:1px solid rgba(255,107,0,.4); padding:1px 6px; border-radius:6px; font-size:10px; }
+        .hoy-badge { background:linear-gradient(135deg,#3483FA,#2563eb); color:white; padding:2px 7px; border-radius:8px; font-size:10px; font-weight:700; margin-left:5px; }
+        .empty { text-align:center; padding:20px; color:#484f58; font-size:13px; }
+        .loading-spinner { width:18px; height:18px; border:2.5px solid #30363d; border-top-color:#3483FA; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; vertical-align:middle; margin-right:6px; }
+        @keyframes spin{to{transform:rotate(360deg)}}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>💰 Balance MercadoPago</h1>
+
+    <div class="cuentas-grid">
+        <div class="cuenta-card mikra">
+            <div class="cuenta-header">
+                <div class="cuenta-dot"></div>
+                <span class="cuenta-nombre">Mikra</span>
+                <span class="cuenta-status loading" id="statusMikra">cargando…</span>
+            </div>
+            <div class="balance-row">
+                <span class="balance-label">Disponible</span>
+                <span class="balance-value disponible" id="disponibleMikra"><span class="balance-skeleton"></span></span>
+            </div>
+            <div class="balance-row">
+                <span class="balance-label">En retención</span>
+                <span class="balance-value retenido" id="retenidoMikra"><span class="balance-skeleton"></span></span>
+            </div>
+            <hr class="balance-divider">
+            <div class="balance-row">
+                <span class="balance-label">Total</span>
+                <span class="balance-value total" id="totalMikra"><span class="balance-skeleton"></span></span>
+            </div>
+        </div>
+
+        <div class="cuenta-card chaya">
+            <div class="cuenta-header">
+                <div class="cuenta-dot"></div>
+                <span class="cuenta-nombre">Chaya</span>
+                <span class="cuenta-status loading" id="statusChaya">cargando…</span>
+            </div>
+            <div class="balance-row">
+                <span class="balance-label">Disponible</span>
+                <span class="balance-value disponible" id="disponibleChaya"><span class="balance-skeleton"></span></span>
+            </div>
+            <div class="balance-row">
+                <span class="balance-label">En retención</span>
+                <span class="balance-value retenido" id="retenidoChaya"><span class="balance-skeleton"></span></span>
+            </div>
+            <hr class="balance-divider">
+            <div class="balance-row">
+                <span class="balance-label">Total</span>
+                <span class="balance-value total" id="totalChaya"><span class="balance-skeleton"></span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="total-card">
+        <div>
+            <div class="total-label">💼 Total combinado</div>
+            <div class="total-sub">Mikra + Chaya</div>
+        </div>
+        <div style="text-align:right">
+            <div class="total-value" id="totalCombinado">—</div>
+            <div class="total-sub" id="disponibleCombinado">Disponible: —</div>
+        </div>
+    </div>
+
+    <button onclick="recargar()" id="btnRecargar">🔄 Actualizar</button>
+    <div class="last-update" id="lastUpdate"></div>
+
+    <div class="proyeccion-card">
+        <div class="proyeccion-title">📅 Próximas liberaciones</div>
+        <div id="releaseContent" class="empty">
+            <span class="loading-spinner"></span> Cargando…
+        </div>
+    </div>
+</div>
+
+<script>
+    // ─── CONFIGURACIÓN ───────────────────────────────────────────────────
+    // Mismos workers que ya usás para Flex — no hay que tocar nada
+    const CUENTAS = [
+        { nombre: 'Mikra', proxy: 'https://mikra-flex-proxy.rafaelassir.workers.dev' },
+        { nombre: 'Chaya', proxy: 'https://chaya-flex-proxy.rafaelassir.workers.dev' }
+    ];
+    // ─────────────────────────────────────────────────────────────────────
+
+    const tokens   = {};
+    const balances = {};
+
+    function fmt(n) {
+        if (n == null) return '—';
+        const s = Math.abs(n).toLocaleString('es-AR', { minimumFractionDigits:0, maximumFractionDigits:0 });
+        return (n < 0 ? '-' : '') + '$ ' + s;
+    }
+
+    function setStatus(nombre, tipo, texto) {
+        const el = document.getElementById('status' + nombre);
+        el.className = 'cuenta-status ' + tipo;
+        el.textContent = texto;
+    }
+
+    async function getToken(cuenta) {
+        if (tokens[cuenta.nombre]) return tokens[cuenta.nombre];
+        const r = await fetch(cuenta.proxy + '/get-token');
+        const d = await r.json();
+        if (d.access_token) { tokens[cuenta.nombre] = d.access_token; return d.access_token; }
+        return null;
+    }
+
+    async function mpGet(path, token) {
+        const r = await fetch('https://api.mercadopago.com' + path, {
+            headers: { Authorization: 'Bearer ' + token }
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    }
+
+    async function cargarBalance(cuenta) {
+        setStatus(cuenta.nombre, 'loading', 'cargando…');
+        try {
+            const token = await getToken(cuenta);
+            if (!token) throw new Error('sin token');
+
+            const d    = await mpGet('/v1/account/balance', token);
+            const disp = d.available_balance   ?? 0;
+            const ret  = d.unavailable_balance ?? 0;
+            const tot  = d.total_amount        ?? (disp + ret);
+
+            document.getElementById('disponible' + cuenta.nombre).textContent = fmt(disp);
+            document.getElementById('retenido'   + cuenta.nombre).textContent = fmt(ret);
+            document.getElementById('total'      + cuenta.nombre).textContent = fmt(tot);
+            setStatus(cuenta.nombre, 'ok', '✓ ok');
+            balances[cuenta.nombre] = { disp, ret, tot };
+        } catch(e) {
+            console.error(cuenta.nombre, e);
+            setStatus(cuenta.nombre, 'error', 'error');
+            ['disponible','retenido','total'].forEach(p =>
+                document.getElementById(p + cuenta.nombre).textContent = '—'
+            );
+        }
+    }
+
+    async function cargarProyeccion() {
+        const map = new Map();
+
+        await Promise.all(CUENTAS.map(async cuenta => {
+            try {
+                const token = tokens[cuenta.nombre];
+                if (!token) return;
+
+                const hoy   = new Date();
+                const hasta = new Date(hoy); hasta.setDate(hasta.getDate() + 30);
+                const ds = hoy.toISOString().split('T')[0]   + 'T00:00:00.000-03:00';
+                const hs = hasta.toISOString().split('T')[0] + 'T23:59:59.000-03:00';
+
+                const d = await mpGet(
+                    '/v1/payments/search?status=approved&sort=money_release_date&criteria=asc' +
+                    '&begin_date=' + encodeURIComponent(ds) +
+                    '&end_date='   + encodeURIComponent(hs) +
+                    '&limit=100',
+                    token
+                );
+
+                (d.results || []).forEach(p => {
+                    if (!p.money_release_date || p.money_release_status === 'released') return;
+                    const fecha = p.money_release_date.substring(0, 10);
+                    const monto = parseFloat(p.transaction_amount || 0);
+                    if (!map.has(fecha)) map.set(fecha, { monto:0, cuentas:new Set() });
+                    map.get(fecha).monto += monto;
+                    map.get(fecha).cuentas.add(cuenta.nombre);
+                });
+            } catch(e) { console.error('Proyección', cuenta.nombre, e); }
+        }));
+
+        renderProyeccion(map);
+    }
+
+    function renderProyeccion(map) {
+        const el = document.getElementById('releaseContent');
+        if (!map.size) { el.innerHTML = '<div class="empty">Sin liberaciones próximas</div>'; return; }
+
+        const dias  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+        const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        const hoyStr = new Date().toISOString().split('T')[0];
+        const dispActual = Object.values(balances).reduce((s,b) => s + (b?.disp ?? 0), 0);
+        let acum = dispActual;
+        let html = '';
+
+        [...map.keys()].sort().forEach(fecha => {
+            const e = map.get(fecha);
+            acum += e.monto;
+            const [y,m,d] = fecha.split('-').map(Number);
+            const dt    = new Date(y, m-1, d);
+            const label = fecha === hoyStr ? 'Hoy' : dias[dt.getDay()] + ' ' + d + ' ' + meses[m-1];
+            const hoyBadge = fecha === hoyStr ? '<span class="hoy-badge">HOY</span>' : '';
+            const badges = [...e.cuentas].map(c =>
+                c === 'Mikra' ? '<span class="badge-mikra">🟣 Mikra</span>'
+                              : '<span class="badge-chaya">🟠 Chaya</span>'
+            ).join('');
+
+            html += '<div class="release-item">' +
+                '<div><div class="release-fecha">' + label + hoyBadge + '</div>' +
+                '<div class="release-cuenta-badges">' + badges + '</div></div>' +
+                '<div style="text-align:right"><div class="release-monto">+' + fmt(e.monto) + '</div>' +
+                '<div class="release-acumulado">→ ' + fmt(acum) + '</div></div>' +
+                '</div>';
+        });
+        el.innerHTML = html;
+    }
+
+    function actualizarTotal() {
+        const vals = Object.values(balances).filter(Boolean);
+        if (!vals.length) return;
+        document.getElementById('totalCombinado').textContent      = fmt(vals.reduce((s,b) => s+b.tot,  0));
+        document.getElementById('disponibleCombinado').textContent = 'Disponible: ' + fmt(vals.reduce((s,b) => s+b.disp, 0));
+    }
+
+    async function recargar() {
+        const btn = document.getElementById('btnRecargar');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading-spinner"></span> Cargando…';
+
+        CUENTAS.forEach(c => {
+            ['disponible','retenido','total'].forEach(p =>
+                document.getElementById(p + c.nombre).innerHTML = '<span class="balance-skeleton"></span>'
+            );
+            setStatus(c.nombre, 'loading', 'cargando…');
+        });
+        document.getElementById('releaseContent').innerHTML =
+            '<div class="empty"><span class="loading-spinner"></span> Cargando…</div>';
+
+        await Promise.all(CUENTAS.map(cargarBalance));
+        actualizarTotal();
+        await cargarProyeccion();
+
+        document.getElementById('lastUpdate').textContent =
+            'Actualizado: ' + new Date().toLocaleTimeString('es-AR',
+                { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+        btn.disabled = false;
+        btn.innerHTML = '🔄 Actualizar';
+    }
+
+    window.addEventListener('DOMContentLoaded', recargar);
+</script>
+</body>
+</html>
